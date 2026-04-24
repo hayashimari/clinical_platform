@@ -16,3 +16,7 @@ def get_connection():
         host=os.getenv("POSTGRES_HOST", "localhost"),
         port=os.getenv("POSTGRES_PORT", "5432"),
     )
+
+
+def SessionLocal():
+    return get_connection()
