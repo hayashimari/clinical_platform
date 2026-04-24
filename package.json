@@ -1,0 +1,12 @@
+{
+  "name": "platform",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.8",
+    "dotenv": "^16.4.7",
+    "openai": "^4.104.0",
+    "pg": "^8.20.0"
+  }
+}
