@@ -8,12 +8,13 @@ router = APIRouter()
 
 class SearchRequest(BaseModel):
     query: str
+    answer_mode: str = "clinical_summary"
 
 
 @router.post("/search")
 def search(req: SearchRequest):
     try:
-        return search_documents(req.query)
+        return search_documents(req.query, req.answer_mode)
     except Exception as e:
         print("SEARCH ERROR:", repr(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
