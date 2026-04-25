@@ -17,7 +17,7 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-from app.db.db import SessionLocal
+from app.db.db import get_connection
 from app.services.openai_service import create_embedding
 
 
@@ -254,7 +254,7 @@ def store_resource(cursor, resource: dict, seen_titles: set[str], seen_urls: set
 
 
 def seed_korean_data(records: list[dict]) -> dict[str, int]:
-    session = SessionLocal()
+    session = get_connection()
     stats = {
         "input": len(records),
         "stored": 0,

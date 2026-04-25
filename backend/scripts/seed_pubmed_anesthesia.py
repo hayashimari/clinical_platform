@@ -23,7 +23,7 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-from app.db.db import SessionLocal
+from app.db.db import get_connection
 from app.services.openai_service import create_embedding
 
 
@@ -32,6 +32,12 @@ ANESTHESIA_KEYWORDS = [
     "opioid sparing postoperative pain",
     "regional anesthesia nerve block",
     "ultrasound guided nerve block",
+    "suprainguinal fascia iliaca block",
+    "SIFI block anesthesia",
+    "fascia iliaca compartment block",
+    "hip fracture analgesia nerve block",
+    "peripheral nerve block hip surgery",
+    "regional anesthesia hip fracture",
     "epidural steroid injection chronic low back pain",
     "neuropathic pain treatment guideline",
     "difficult airway management anesthesia guideline",
@@ -306,7 +312,7 @@ def seed_keyword(
 
 
 def seed_anesthesia_pubmed(limit_per_keyword: int) -> int:
-    session = SessionLocal()
+    session = get_connection()
     total_stats = {
         "fetched": 0,
         "stored": 0,

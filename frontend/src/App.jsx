@@ -77,6 +77,9 @@ const badgeStyle = {
   fontWeight: 600,
 };
 
+const NO_EVIDENCE_MESSAGE =
+  "관련 근거를 찾지 못했습니다. 다른 키워드로 검색해 주세요.";
+
 function App() {
   const [query, setQuery] = useState("");
   const [searchedQuery, setSearchedQuery] = useState("");
@@ -110,13 +113,21 @@ function App() {
       }
 
       const data = await res.json();
+      const nextAnswer = data.answer || "";
+      const nextCitations = data.citations || [];
+      const nextResults = data.results || [];
+
       setSearchedQuery(trimmedQuery);
       setExpandedResults({});
-      setAnswer(data.answer || "");
-      setCitations(data.citations || []);
-      setResults(data.results || []);
+      setAnswer(nextAnswer);
+      setCitations(nextCitations);
+      setResults(nextResults);
+      setError(!nextAnswer.trim() && nextResults.length > 0 ? NO_EVIDENCE_MESSAGE : "");
     } catch (err) {
-      setError(err.message);
+      setAnswer("");
+      setCitations([]);
+      setResults([]);
+      setError(NO_EVIDENCE_MESSAGE);
     } finally {
       setLoading(false);
     }
@@ -564,18 +575,18 @@ function App() {
             </span>
           </div>
 
-          {showNoResultsMessage && (
-            <div
-              style={{
-                ...surfaceStyle,
-                padding: "28px",
-                textAlign: "center",
-                color: "#657b8c",
-              }}
-            >
-              검색 결과가 없습니다
-            </div>
-          )}
+        {showNoResultsMessage && (
+          <div
+            style={{
+              ...surfaceStyle,
+              padding: "28px",
+              textAlign: "center",
+              color: "#657b8c",
+            }}
+          >
+              {NO_EVIDENCE_MESSAGE}
+          </div>
+        )}
 
           {!showNoResultsMessage && (
             <div style={{ display: "grid", gap: "16px" }}>
