@@ -5,11 +5,10 @@ from urllib.parse import urlparse
 import psycopg2
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
-from sqlalchemy.engine import URL
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 
-if not os.getenv("DATABASE_URL"):
+if os.getenv("DATABASE_URL") is None:
     load_dotenv(Path(__file__).resolve().parents[3] / ".env")
 
 
@@ -21,23 +20,16 @@ def _normalize_database_url(database_url: str) -> str:
 
 def _build_database_url() -> str:
     database_url = os.getenv("DATABASE_URL")
-    if database_url:
-        return _normalize_database_url(database_url)
+    if database_url is None:
+        raise RuntimeError("DATABASE_URL is not set")
 
-    return URL.create(
-        drivername="postgresql",
-        username=os.getenv("POSTGRES_USER", "postgres"),
-        password=os.getenv("POSTGRES_PASSWORD", "postgres"),
-        host=os.getenv("POSTGRES_HOST", "localhost"),
-        port=int(os.getenv("POSTGRES_PORT", "5432")),
-        database=os.getenv("POSTGRES_DB", "platform"),
-    ).render_as_string(hide_password=False)
+    return _normalize_database_url(database_url)
 
 
 DATABASE_URL = _build_database_url()
 _parsed_db_url = urlparse(str(DATABASE_URL))
 print(
-    f"[DB CONFIG] DATABASE_URL env present={bool(os.getenv('DATABASE_URL'))}, "
+    f"[DB CONFIG] DATABASE_URL env present={os.getenv('DATABASE_URL') is not None}, "
     f"host={_parsed_db_url.hostname}, db={_parsed_db_url.path.lstrip('/')}"
 )
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
@@ -46,14 +38,4 @@ Base = declarative_base()
 
 
 def get_connection():
-    database_url = os.getenv("DATABASE_URL")
-    if database_url:
-        return psycopg2.connect(_normalize_database_url(database_url))
-
-    return psycopg2.connect(
-        dbname=os.getenv("POSTGRES_DB", "platform"),
-        user=os.getenv("POSTGRES_USER", "postgres"),
-        password=os.getenv("POSTGRES_PASSWORD", "postgres"),
-        host=os.getenv("POSTGRES_HOST", "localhost"),
-        port=os.getenv("POSTGRES_PORT", "5432"),
-    )
+    return psycopg2.connect(DATABASE_URL)
