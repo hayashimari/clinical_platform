@@ -9,7 +9,8 @@ from sqlalchemy.engine import URL
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 
-load_dotenv(Path(__file__).resolve().parents[3] / ".env")
+if not os.getenv("DATABASE_URL"):
+    load_dotenv(Path(__file__).resolve().parents[3] / ".env")
 
 
 def _normalize_database_url(database_url: str) -> str:
