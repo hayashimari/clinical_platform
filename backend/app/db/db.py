@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from urllib.parse import urlparse
 
 import psycopg2
 from dotenv import load_dotenv
@@ -33,6 +34,11 @@ def _build_database_url() -> str:
 
 
 DATABASE_URL = _build_database_url()
+_parsed_db_url = urlparse(str(DATABASE_URL))
+print(
+    f"[DB CONFIG] DATABASE_URL env present={bool(os.getenv('DATABASE_URL'))}, "
+    f"host={_parsed_db_url.hostname}, db={_parsed_db_url.path.lstrip('/')}"
+)
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
