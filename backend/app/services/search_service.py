@@ -4,6 +4,8 @@ from app.services.openai_service import create_chat_completion, create_embedding
 
 SEARCH_LIMIT = 10
 SCORE_THRESHOLD = 0.15
+TITLE_KEYWORD_BOOST = 0.5
+CONTENT_KEYWORD_BOOST = 0.2
 
 
 def _embedding_to_vector(embedding: list[float]) -> str:
@@ -28,7 +30,7 @@ def _fetch_search_rows(embedding: list[float], query: str):
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """
+                f"""
                 SELECT
                     r.id,
                     r.title,
@@ -39,12 +41,12 @@ def _fetch_search_rows(embedding: list[float], query: str):
                     (rs.embedding <-> %s::vector) AS distance,
                     (
                         CASE
-                            WHEN r.title ILIKE %s ESCAPE '\\' THEN 0.2
+                            WHEN r.title ILIKE %s ESCAPE '\\' THEN {TITLE_KEYWORD_BOOST}
                             ELSE 0.0
                         END
                         +
                         CASE
-                            WHEN rs.content ILIKE %s ESCAPE '\\' THEN 0.1
+                            WHEN rs.content ILIKE %s ESCAPE '\\' THEN {CONTENT_KEYWORD_BOOST}
                             ELSE 0.0
                         END
                     ) AS keyword_boost
@@ -56,12 +58,12 @@ def _fetch_search_rows(embedding: list[float], query: str):
                     -
                     (
                         CASE
-                            WHEN r.title ILIKE %s ESCAPE '\\' THEN 0.2
+                            WHEN r.title ILIKE %s ESCAPE '\\' THEN {TITLE_KEYWORD_BOOST}
                             ELSE 0.0
                         END
                         +
                         CASE
-                            WHEN rs.content ILIKE %s ESCAPE '\\' THEN 0.1
+                            WHEN rs.content ILIKE %s ESCAPE '\\' THEN {CONTENT_KEYWORD_BOOST}
                             ELSE 0.0
                         END
                     ),
@@ -82,8 +84,8 @@ def _fetch_search_rows(embedding: list[float], query: str):
             return cur.fetchall()
 
 
-def _calculate_score(distance: float) -> float:
-    return round(1 / (1 + distance), 4)
+def _calculate_score(distance: float, keyword_boost: float) -> float:
+    return round((1 / (1 + distance)) + keyword_boost, 4)
 
 
 def _build_results(rows) -> list[dict]:
@@ -95,10 +97,14 @@ def _build_results(rows) -> list[dict]:
             "abstract": row[3],
             "source_url": row[4],
             "content": row[5],
-            "score": _calculate_score(row[6]),
+            "score": _calculate_score(row[6], row[7]),
         }
         for row in rows
     ]
+
+
+def _sort_results_by_score(results: list[dict]) -> list[dict]:
+    return sorted(results, key=lambda item: item["score"], reverse=True)
 
 
 def _deduplicate_results(results: list[dict]) -> list[dict]:
@@ -142,7 +148,8 @@ def search_documents(db, query: str) -> dict:
     embedding = create_embedding(query)
     rows = _fetch_search_rows(embedding, query)
     raw_results = _build_results(rows)
-    deduplicated_results = _deduplicate_results(raw_results)
+    sorted_results = _sort_results_by_score(raw_results)
+    deduplicated_results = _deduplicate_results(sorted_results)
     filtered_results = deduplicated_results
     context = _build_context(rows)
     answer = create_chat_completion(query=query, context=context)
