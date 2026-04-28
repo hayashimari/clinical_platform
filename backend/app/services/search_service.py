@@ -11,8 +11,20 @@ def _embedding_to_vector(embedding: list[float]) -> str:
     return "[" + ",".join(map(str, embedding)) + "]"
 
 
-def _fetch_search_rows(embedding: list[float]):
+def _build_keyword_pattern(query: str) -> str | None:
+    normalized_query = query.strip()
+    if not normalized_query:
+        return None
+
+    escaped_query = (
+        normalized_query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    )
+    return f"%{escaped_query}%"
+
+
+def _fetch_search_rows(embedding: list[float], query: str):
     embedding_vector = _embedding_to_vector(embedding)
+    keyword_pattern = _build_keyword_pattern(query)
 
     with get_connection() as conn:
         with conn.cursor() as cur:
@@ -25,20 +37,31 @@ def _fetch_search_rows(embedding: list[float]):
                     r.abstract,
                     r.source_url,
                     rs.content,
-                    (rs.embedding <-> %s::vector) AS distance
+                    (rs.embedding <-> %s::vector) AS distance,
+                    (
+                        CASE
+                            WHEN r.title ILIKE %s ESCAPE '\\' THEN 0.2
+                            ELSE 0.0
+                        END
+                        +
+                        CASE
+                            WHEN rs.content ILIKE %s ESCAPE '\\' THEN 0.1
+                            ELSE 0.0
+                        END
+                    ) AS keyword_boost
                 FROM resource_segments rs
                 JOIN resources r ON rs.resource_id = r.id
                 WHERE rs.embedding IS NOT NULL
-                ORDER BY distance
+                ORDER BY distance - keyword_boost, distance
                 LIMIT %s;
                 """,
-                (embedding_vector, SEARCH_LIMIT),
+                (embedding_vector, keyword_pattern, keyword_pattern, SEARCH_LIMIT),
             )
             return cur.fetchall()
 
 
 def _calculate_score(distance: float) -> float:
-    return 1 - distance
+    return round(1 / (1 + distance), 4)
 
 
 def _build_results(rows) -> list[dict]:
@@ -95,7 +118,7 @@ def _build_citations(results: list[dict]) -> list[dict]:
 
 def search_documents(db, query: str) -> dict:
     embedding = create_embedding(query)
-    rows = _fetch_search_rows(embedding)
+    rows = _fetch_search_rows(embedding, query)
     raw_results = _build_results(rows)
     deduplicated_results = _deduplicate_results(raw_results)
     filtered_results = deduplicated_results
