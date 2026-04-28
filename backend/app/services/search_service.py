@@ -98,7 +98,7 @@ def search_documents(db, query: str) -> dict:
     rows = _fetch_search_rows(embedding)
     raw_results = _build_results(rows)
     deduplicated_results = _deduplicate_results(raw_results)
-    filtered_results = _apply_score_threshold(deduplicated_results)
+    filtered_results = deduplicated_results
     context = _build_context(rows)
     answer = create_chat_completion(query=query, context=context)
 
