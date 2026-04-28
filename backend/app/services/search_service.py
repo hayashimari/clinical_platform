@@ -12,6 +12,11 @@ QUERY_EXPANSION_RULES = (
     (("통증",), "pain analgesia"),
     (("마취",), "anesthesia anesthesia-related"),
 )
+RESOURCE_TYPE_SCORE_BOOSTS = {
+    "guideline": 0.3,
+    "korean_paper": 0.2,
+    "paper": 0.0,
+}
 
 
 def _embedding_to_vector(embedding: list[float]) -> str:
@@ -107,10 +112,18 @@ def _fetch_search_rows(embedding: list[float], query: str):
             return cur.fetchall()
 
 
-def _calculate_score(distance: float, keyword_boost: float) -> float:
+def _get_resource_type_boost(resource_type: str) -> float:
+    return float(RESOURCE_TYPE_SCORE_BOOSTS.get(resource_type, 0.0))
+
+
+def _calculate_score(
+    distance: float, keyword_boost: float, resource_type: str
+) -> float:
     distance_value = float(distance)
     keyword_boost_value = float(keyword_boost)
-    return round((1 / (1 + distance_value)) + keyword_boost_value, 4)
+    base_score = (1 / (1 + distance_value)) + keyword_boost_value
+    type_boost = _get_resource_type_boost(resource_type)
+    return round(base_score + type_boost, 4)
 
 
 def _build_results(rows) -> list[dict]:
@@ -122,7 +135,7 @@ def _build_results(rows) -> list[dict]:
             "abstract": row[3],
             "source_url": row[4],
             "content": row[5],
-            "score": _calculate_score(row[6], row[7]),
+            "score": _calculate_score(row[6], row[7], row[2]),
         }
         for row in rows
     ]
