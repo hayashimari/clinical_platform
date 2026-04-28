@@ -93,7 +93,7 @@ def _build_citations(results: list[dict]) -> list[dict]:
     ]
 
 
-def search_documents(query: str) -> dict:
+def search_documents(db, query: str) -> dict:
     embedding = create_embedding(query)
     rows = _fetch_search_rows(embedding)
     raw_results = _build_results(rows)
