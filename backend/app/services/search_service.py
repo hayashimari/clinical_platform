@@ -7,10 +7,32 @@ SCORE_THRESHOLD = 0.47
 TITLE_KEYWORD_BOOST = 0.5
 CONTENT_KEYWORD_BOOST = 0.2
 FALLBACK_RESULT_LIMIT = 3
+QUERY_EXPANSION_RULES = (
+    (("오심", "구토"), "nausea vomiting PONV"),
+    (("통증",), "pain analgesia"),
+    (("마취",), "anesthesia anesthesia-related"),
+)
 
 
 def _embedding_to_vector(embedding: list[float]) -> str:
     return "[" + ",".join(map(str, embedding)) + "]"
+
+
+def expand_query(query: str) -> str:
+    normalized_query = query.strip()
+    if not normalized_query:
+        return query
+
+    expansions = []
+
+    for keywords, expanded_terms in QUERY_EXPANSION_RULES:
+        if any(keyword in normalized_query for keyword in keywords):
+            expansions.append(expanded_terms)
+
+    if not expansions:
+        return normalized_query
+
+    return " ".join([normalized_query, *dict.fromkeys(expansions)])
 
 
 def _build_keyword_pattern(query: str) -> str | None:
@@ -156,7 +178,8 @@ def _build_citations(results: list[dict]) -> list[dict]:
 
 
 def search_documents(db, query: str) -> dict:
-    embedding = create_embedding(query)
+    expanded_query = expand_query(query)
+    embedding = create_embedding(expanded_query)
     rows = _fetch_search_rows(embedding, query)
     raw_results = _build_results(rows)
     sorted_results = _sort_results_by_score(raw_results)
