@@ -3,9 +3,10 @@ from app.services.openai_service import create_chat_completion, create_embedding
 
 
 SEARCH_LIMIT = 10
-SCORE_THRESHOLD = 0.15
+SCORE_THRESHOLD = 0.47
 TITLE_KEYWORD_BOOST = 0.5
 CONTENT_KEYWORD_BOOST = 0.2
+FALLBACK_RESULT_LIMIT = 3
 
 
 def _embedding_to_vector(embedding: list[float]) -> str:
@@ -123,12 +124,22 @@ def _deduplicate_results(results: list[dict]) -> list[dict]:
 
 
 def _apply_score_threshold(results: list[dict]) -> list[dict]:
-    return [item for item in results if item["score"] > SCORE_THRESHOLD]
+    return [item for item in results if item["score"] >= SCORE_THRESHOLD]
 
 
-def _build_context(rows) -> str:
-    top_rows = rows[:2]
-    return "\n\n".join(f"{row[1]}\n{row[5]}" for row in top_rows)
+def _apply_result_fallback(results: list[dict]) -> list[dict]:
+    filtered_results = _apply_score_threshold(results)
+    if filtered_results:
+        return filtered_results
+
+    return results[:FALLBACK_RESULT_LIMIT]
+
+
+def _build_context(results: list[dict]) -> str:
+    top_results = results[:2]
+    return "\n\n".join(
+        f"{item['title']}\n{item['content']}" for item in top_results
+    )
 
 
 def _build_citations(results: list[dict]) -> list[dict]:
@@ -150,8 +161,8 @@ def search_documents(db, query: str) -> dict:
     raw_results = _build_results(rows)
     sorted_results = _sort_results_by_score(raw_results)
     deduplicated_results = _deduplicate_results(sorted_results)
-    filtered_results = deduplicated_results
-    context = _build_context(rows)
+    filtered_results = _apply_result_fallback(deduplicated_results)
+    context = _build_context(filtered_results)
     answer = create_chat_completion(query=query, context=context)
 
     return {
