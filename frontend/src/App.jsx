@@ -4,42 +4,42 @@ const pageStyle = {
   minHeight: "100vh",
   background:
     "linear-gradient(180deg, #f3f8fb 0%, #eef4f8 22%, #f8fbfd 100%)",
-  color: "#153047",
+  color: "#102c44",
   fontFamily:
     '"Segoe UI", "Noto Sans KR", "Apple SD Gothic Neo", sans-serif',
 };
 
 const containerStyle = {
-  width: "min(1120px, calc(100% - 32px))",
+  width: "min(900px, calc(100% - 32px))",
   margin: "0 auto",
-  padding: "40px 0 72px",
+  padding: "32px 0 64px",
 };
 
 const surfaceStyle = {
   backgroundColor: "#ffffff",
-  border: "1px solid #dbe7ee",
-  borderRadius: "20px",
-  boxShadow: "0 18px 40px rgba(16, 61, 92, 0.08)",
+  border: "1px solid #c8dae5",
+  borderRadius: "18px",
+  boxShadow: "0 16px 32px rgba(16, 61, 92, 0.1)",
 };
 
 const sectionTitleStyle = {
   margin: 0,
   fontSize: "1.15rem",
   fontWeight: 700,
-  color: "#12324a",
+  color: "#0f2e46",
 };
 
 const cardTitleStyle = {
   margin: 0,
   fontSize: "1rem",
   fontWeight: 700,
-  color: "#163852",
+  color: "#0f2f48",
   lineHeight: 1.45,
 };
 
 const metricStyle = {
   fontSize: "0.78rem",
-  color: "#5f7485",
+  color: "#4f677a",
 };
 
 const primaryButtonStyle = {
@@ -57,13 +57,14 @@ const linkButtonStyle = {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  padding: "10px 14px",
-  borderRadius: "10px",
-  backgroundColor: "#e9f5fa",
-  color: "#0b6988",
+  padding: "10px 16px",
+  borderRadius: "12px",
+  background: "linear-gradient(135deg, #0d6686 0%, #0b84ad 100%)",
+  color: "#f8fdff",
   fontSize: "0.88rem",
   fontWeight: 700,
   textDecoration: "none",
+  boxShadow: "0 10px 20px rgba(11, 105, 136, 0.22)",
 };
 
 const badgeStyle = {
@@ -71,15 +72,32 @@ const badgeStyle = {
   alignItems: "center",
   padding: "6px 10px",
   borderRadius: "999px",
-  backgroundColor: "#eef6fa",
-  color: "#486476",
+  backgroundColor: "#e6f1f7",
+  color: "#35546a",
   fontSize: "0.78rem",
-  fontWeight: 600,
+  fontWeight: 700,
 };
 
 const NO_EVIDENCE_MESSAGE =
   "관련 근거를 찾지 못했습니다. 다른 키워드로 검색해 주세요.";
 const MIN_VISIBLE_RESULTS = 5;
+const SUMMARY_EMPHASIS_TERMS = [
+  "regional anesthesia",
+  "postoperative pain",
+  "pain management",
+  "perioperative care",
+  "postoperative nausea vomiting",
+  "analgesia",
+  "anesthesia",
+  "anaesthesia",
+  "nausea",
+  "vomiting",
+  "PONV",
+  "오심",
+  "구토",
+  "통증",
+  "마취",
+];
 
 function App() {
   const [query, setQuery] = useState("");
@@ -91,7 +109,6 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
-  const [expandedResults, setExpandedResults] = useState({});
 
   const handleSearch = async () => {
     const trimmedQuery = query.trim();
@@ -119,7 +136,6 @@ function App() {
       const nextResults = data.results || [];
 
       setSearchedQuery(trimmedQuery);
-      setExpandedResults({});
       setResourceType("all");
       setAnswer(nextAnswer);
       setCitations(nextCitations);
@@ -155,8 +171,49 @@ function App() {
     );
   };
 
+  const buildEmphasisTerms = () => {
+    const queryTerms = searchedQuery
+      .split(/\s+/)
+      .map((term) => term.replace(/[^\p{L}\p{N}-]/gu, "").trim())
+      .filter((term) => term.length > 1);
+
+    return Array.from(
+      new Set([...SUMMARY_EMPHASIS_TERMS, ...queryTerms])
+    ).sort((left, right) => right.length - left.length);
+  };
+
+  const renderEmphasizedText = (text) => {
+    const safeText = typeof text === "string" ? text : String(text ?? "");
+    const emphasisTerms = buildEmphasisTerms();
+
+    if (!safeText || emphasisTerms.length === 0) {
+      return safeText;
+    }
+
+    const escapedTerms = emphasisTerms.map((term) =>
+      term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    );
+    const emphasisRegex = new RegExp(`(${escapedTerms.join("|")})`, "gi");
+    const normalizedTerms = new Set(
+      emphasisTerms.map((term) => term.toLowerCase())
+    );
+
+    return safeText.split(emphasisRegex).map((part, idx) =>
+      normalizedTerms.has(part.toLowerCase()) ? (
+        <strong key={idx} style={{ color: "#0f3552", fontWeight: 800 }}>
+          {part}
+        </strong>
+      ) : (
+        part
+      )
+    );
+  };
+
   const normalizeResourceType = (value) =>
     String(value ?? "").trim().toLowerCase();
+
+  const formatResourceTypeLabel = (value) =>
+    normalizeResourceType(value).replace(/_/g, " ");
 
   const matchesResourceType = (item) => {
     if (resourceType === "all") {
@@ -193,33 +250,39 @@ function App() {
   const getItemKey = (item, idx) =>
     item?.resource_id ?? item?.source_url ?? `${item?.title ?? "item"}-${idx}`;
 
-  const toggleExpanded = (itemKey) => {
-    setExpandedResults((prev) => ({
-      ...prev,
-      [itemKey]: !prev[itemKey],
-    }));
-  };
-
-  const getClampStyle = (isExpanded) => ({
-    margin: 0,
-    color: "#395568",
-    lineHeight: 1.75,
-    fontSize: "0.94rem",
-    ...(isExpanded
-      ? {}
-      : {
-          display: "-webkit-box",
-          WebkitBoxOrient: "vertical",
-          WebkitLineClamp: 3,
-          overflow: "hidden",
-        }),
-  });
-
-  const shouldShowExpand = (text) =>
-    typeof text === "string" && text.trim().length > 180;
-
   const formatScore = (value) =>
     typeof value === "number" ? value.toFixed(3) : null;
+
+  const formatRelevance = (value) => {
+    if (typeof value !== "number") {
+      return null;
+    }
+
+    const normalizedValue = Math.max(0, Math.min(100, Math.round(value * 100)));
+    return `관련도 ${normalizedValue}%`;
+  };
+
+  const buildSummaryBullets = (text) => {
+    const safeText = typeof text === "string" ? text : String(text ?? "");
+    const normalizedText = safeText.trim();
+
+    if (!normalizedText) {
+      return [];
+    }
+
+    const lines = normalizedText
+      .split(/\n+/)
+      .flatMap((line) => line.split(/(?<=[.!?])\s+/))
+      .map((line) => line.replace(/^[\u2022\-*\d.)\s]+/, "").trim())
+      .filter(Boolean);
+
+    return lines.length > 0 ? lines : [normalizedText];
+  };
+
+  const buildResultPreview = (item) =>
+    typeof item?.abstract === "string" && item.abstract.trim()
+      ? item.abstract.trim()
+      : String(item?.content ?? "").trim();
 
   const resourceTypeOptions = Array.from(
     new Set(
@@ -243,8 +306,8 @@ function App() {
         <section
           style={{
             ...surfaceStyle,
-            padding: "28px",
-            marginBottom: "28px",
+            padding: "24px",
+            marginBottom: "24px",
             background:
               "linear-gradient(145deg, #0f5e7c 0%, #13506f 58%, #183c5a 100%)",
             color: "#f6fbff",
@@ -413,8 +476,8 @@ function App() {
           <section
             style={{
               ...surfaceStyle,
-              padding: "26px",
-              marginBottom: "24px",
+              padding: "22px",
+              marginBottom: "20px",
             }}
           >
             <div
@@ -457,21 +520,47 @@ function App() {
                 padding: "18px",
                 borderRadius: "16px",
                 background:
-                  "linear-gradient(180deg, #f8fcfe 0%, #eef6fa 100%)",
-                border: "1px solid #d6e6ee",
+                  "linear-gradient(180deg, #f8fcfe 0%, #eaf3f8 100%)",
+                border: "1px solid #cddfe9",
               }}
             >
-              <p
-                style={{
-                  margin: 0,
-                  lineHeight: 1.9,
-                  color: "#28485e",
-                  fontSize: "1rem",
-                  whiteSpace: "pre-wrap",
-                }}
-              >
-                {answer}
-              </p>
+              <div style={{ display: "grid", gap: "10px" }}>
+                {buildSummaryBullets(answer).map((bullet, idx) => (
+                  <div
+                    key={`${bullet}-${idx}`}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "16px 1fr",
+                      gap: "10px",
+                      alignItems: "flex-start",
+                      padding: "10px 12px",
+                      borderRadius: "12px",
+                      backgroundColor: "#ffffff",
+                      border: "1px solid #d9e7ef",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "1rem",
+                        lineHeight: 1.5,
+                        color: "#0f6787",
+                        fontWeight: 900,
+                      }}
+                    >
+                      •
+                    </span>
+                    <div
+                      style={{
+                        lineHeight: 1.7,
+                        color: "#1d405b",
+                        fontSize: "0.97rem",
+                      }}
+                    >
+                      {renderEmphasizedText(bullet)}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div style={{ marginTop: "18px" }}>
@@ -670,10 +759,10 @@ function App() {
                     key={getItemKey(item, idx)}
                     style={{
                       ...surfaceStyle,
-                      padding: "18px",
+                      padding: "16px",
                       display: "flex",
                       flexDirection: "column",
-                      gap: "12px",
+                      gap: "10px",
                     }}
                   >
                     <div
@@ -791,7 +880,7 @@ function App() {
           <div
             style={{
               ...surfaceStyle,
-              padding: "28px",
+              padding: "24px",
               textAlign: "center",
               color: "#657b8c",
             }}
@@ -804,23 +893,21 @@ function App() {
             <div style={{ display: "grid", gap: "16px" }}>
               {visibleResults.map((item, idx) => {
                 const itemKey = getItemKey(item, idx);
-                const isExpanded = Boolean(expandedResults[itemKey]);
-                const showExpandButton =
-                  shouldShowExpand(item.abstract) || shouldShowExpand(item.content);
+                const previewText = buildResultPreview(item);
 
                 return (
                   <article
                     key={itemKey}
                     style={{
                       ...surfaceStyle,
-                      padding: "22px",
+                      padding: "16px 18px",
                     }}
                   >
                     <div
                       style={{
                         display: "flex",
                         flexWrap: "wrap",
-                        gap: "12px",
+                        gap: "10px",
                         justifyContent: "space-between",
                         alignItems: "flex-start",
                       }}
@@ -832,133 +919,123 @@ function App() {
                             flexWrap: "wrap",
                             gap: "8px",
                             alignItems: "center",
-                            marginBottom: "10px",
+                            marginBottom: "8px",
                           }}
                         >
-                          <span style={badgeStyle}>Result {idx + 1}</span>
                           {item.resource_type && (
                             <span
                               style={{
                                 ...badgeStyle,
-                                backgroundColor: "#edf5ff",
-                                color: "#305b85",
+                                backgroundColor: "#dfeef8",
+                                color: "#214e72",
                               }}
                             >
-                              {item.resource_type}
+                              {formatResourceTypeLabel(item.resource_type)}
                             </span>
                           )}
+                          <span style={{ ...metricStyle, fontWeight: 700 }}>
+                            Result {idx + 1}
+                          </span>
                         </div>
 
-                        <h3 style={{ ...cardTitleStyle, fontSize: "1.08rem" }}>
+                        <h3 style={{ ...cardTitleStyle, fontSize: "1.18rem" }}>
                           {item.title}
                         </h3>
                       </div>
 
-                      {item.source_url && (
-                        <a
-                          href={item.source_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          style={linkButtonStyle}
-                        >
-                          PubMed 보기
-                        </a>
-                      )}
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "10px",
+                          alignItems: "flex-end",
+                        }}
+                      >
+                        {formatRelevance(item.score) && (
+                          <span
+                            style={{
+                              ...badgeStyle,
+                              backgroundColor: "#e7f4ea",
+                              color: "#185e3b",
+                            }}
+                          >
+                            {formatRelevance(item.score)}
+                          </span>
+                        )}
+                        {item.source_url && (
+                          <a
+                            href={item.source_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={linkButtonStyle}
+                          >
+                            PubMed 보기
+                          </a>
+                        )}
+                      </div>
                     </div>
 
-                    <div
-                      style={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: "10px 14px",
-                        marginTop: "14px",
-                      }}
-                    >
-                      {formatScore(item.score) && (
-                        <span style={metricStyle}>score {formatScore(item.score)}</span>
-                      )}
-                      {formatScore(item.vector_score) && (
-                        <span style={metricStyle}>
-                          vector {formatScore(item.vector_score)}
-                        </span>
-                      )}
-                      {formatScore(item.keyword_score) && (
-                        <span style={metricStyle}>
-                          keyword {formatScore(item.keyword_score)}
-                        </span>
-                      )}
-                    </div>
+                    {formatScore(item.score) && (
+                      <div
+                        style={{
+                          marginTop: "10px",
+                          color: "#587083",
+                          fontSize: "0.82rem",
+                          fontWeight: 600,
+                        }}
+                      >
+                        score {formatScore(item.score)}
+                      </div>
+                    )}
 
                     {item.source_url && (
-                      <a
-                        href={item.source_url}
-                        target="_blank"
-                        rel="noreferrer"
+                      <div
                         style={{
-                          display: "inline-block",
-                          marginTop: "12px",
-                          color: "#0b6988",
-                          fontSize: "0.88rem",
-                          textDecoration: "none",
+                          marginTop: "8px",
+                          color: "#486578",
+                          fontSize: "0.8rem",
                           wordBreak: "break-all",
                         }}
                       >
                         {item.source_url}
-                      </a>
-                    )}
-
-                    {item.abstract && (
-                      <div style={{ marginTop: "16px" }}>
-                        <p
-                          style={{
-                            margin: "0 0 8px",
-                            fontWeight: 700,
-                            color: "#1e425d",
-                            fontSize: "0.9rem",
-                          }}
-                        >
-                          Abstract
-                        </p>
-                        <div style={getClampStyle(isExpanded)}>
-                          {renderHighlightedText(item.abstract)}
-                        </div>
                       </div>
                     )}
 
-                    {item.content && (
-                      <div style={{ marginTop: "14px" }}>
-                        <p
-                          style={{
-                            margin: "0 0 8px",
-                            fontWeight: 700,
-                            color: "#1e425d",
-                            fontSize: "0.9rem",
-                          }}
-                        >
-                          Matched Content
-                        </p>
-                        <div style={getClampStyle(isExpanded)}>
-                          {renderHighlightedText(item.content)}
-                        </div>
-                      </div>
-                    )}
-
-                    {showExpandButton && (
-                      <button
-                        type="button"
-                        onClick={() => toggleExpanded(itemKey)}
+                    {previewText && (
+                      <div
                         style={{
-                          marginTop: "14px",
-                          padding: 0,
-                          border: "none",
-                          background: "none",
-                          color: "#0b6988",
-                          fontWeight: 700,
-                          cursor: "pointer",
+                          marginTop: "12px",
+                          padding: "12px 14px",
+                          borderRadius: "14px",
+                          backgroundColor: "#f5fafc",
+                          border: "1px solid #dce8ef",
                         }}
                       >
-                        {isExpanded ? "접기" : "더보기"}
-                      </button>
+                        <p
+                          style={{
+                            margin: "0 0 6px",
+                            fontWeight: 700,
+                            color: "#1a405b",
+                            fontSize: "0.86rem",
+                          }}
+                        >
+                          핵심 요약
+                        </p>
+                        <div
+                          style={{
+                            margin: 0,
+                            color: "#304d63",
+                            lineHeight: 1.65,
+                            fontSize: "0.92rem",
+                            display: "-webkit-box",
+                            WebkitBoxOrient: "vertical",
+                            WebkitLineClamp: 2,
+                            overflow: "hidden",
+                          }}
+                        >
+                          {renderHighlightedText(previewText)}
+                        </div>
+                      </div>
                     )}
                   </article>
                 );
