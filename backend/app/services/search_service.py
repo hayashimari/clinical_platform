@@ -3,7 +3,6 @@ from app.services.openai_service import create_chat_completion, create_embedding
 
 
 SEARCH_LIMIT = 10
-CONTEXT_LIMIT = 2
 SCORE_THRESHOLD = 0.15
 
 
@@ -99,8 +98,8 @@ def _apply_score_threshold(results: list[dict]) -> list[dict]:
 
 
 def _build_context(rows) -> str:
-    top_rows = rows[:CONTEXT_LIMIT]
-    return "\n\n".join(row[5] for row in top_rows)
+    top_rows = rows[:2]
+    return "\n\n".join(f"{row[1]}\n{row[5]}" for row in top_rows)
 
 
 def _build_citations(results: list[dict]) -> list[dict]:
