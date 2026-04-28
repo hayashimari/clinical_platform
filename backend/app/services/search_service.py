@@ -51,10 +51,33 @@ def _fetch_search_rows(embedding: list[float], query: str):
                 FROM resource_segments rs
                 JOIN resources r ON rs.resource_id = r.id
                 WHERE rs.embedding IS NOT NULL
-                ORDER BY distance - keyword_boost, distance
+                ORDER BY
+                    (rs.embedding <-> %s::vector)
+                    -
+                    (
+                        CASE
+                            WHEN r.title ILIKE %s ESCAPE '\\' THEN 0.2
+                            ELSE 0.0
+                        END
+                        +
+                        CASE
+                            WHEN rs.content ILIKE %s ESCAPE '\\' THEN 0.1
+                            ELSE 0.0
+                        END
+                    ),
+                    (rs.embedding <-> %s::vector)
                 LIMIT %s;
                 """,
-                (embedding_vector, keyword_pattern, keyword_pattern, SEARCH_LIMIT),
+                (
+                    embedding_vector,
+                    keyword_pattern,
+                    keyword_pattern,
+                    embedding_vector,
+                    keyword_pattern,
+                    keyword_pattern,
+                    embedding_vector,
+                    SEARCH_LIMIT,
+                ),
             )
             return cur.fetchall()
 
