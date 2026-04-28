@@ -79,6 +79,7 @@ const badgeStyle = {
 
 const NO_EVIDENCE_MESSAGE =
   "관련 근거를 찾지 못했습니다. 다른 키워드로 검색해 주세요.";
+const MIN_VISIBLE_RESULTS = 5;
 
 function App() {
   const [query, setQuery] = useState("");
@@ -119,11 +120,12 @@ function App() {
 
       setSearchedQuery(trimmedQuery);
       setExpandedResults({});
+      setResourceType("all");
       setAnswer(nextAnswer);
       setCitations(nextCitations);
       setResults(nextResults);
       setError(!nextAnswer.trim() && nextResults.length > 0 ? NO_EVIDENCE_MESSAGE : "");
-    } catch (err) {
+    } catch {
       setAnswer("");
       setCitations([]);
       setResults([]);
@@ -153,12 +155,39 @@ function App() {
     );
   };
 
+  const normalizeResourceType = (value) =>
+    String(value ?? "").trim().toLowerCase();
+
   const matchesResourceType = (item) => {
     if (resourceType === "all") {
       return true;
     }
 
-    return String(item?.resource_type ?? "").toLowerCase() === resourceType;
+    return normalizeResourceType(item?.resource_type) === resourceType;
+  };
+
+  const buildVisibleResults = (items) => {
+    const matchedItems = items.filter(matchesResourceType);
+    const minimumVisibleCount = Math.min(MIN_VISIBLE_RESULTS, items.length);
+
+    if (
+      resourceType === "all" ||
+      matchedItems.length >= minimumVisibleCount
+    ) {
+      return {
+        items: matchedItems,
+        matchedCount: matchedItems.length,
+        isSupplemented: false,
+      };
+    }
+
+    const supplementalItems = items.filter((item) => !matchesResourceType(item));
+
+    return {
+      items: [...matchedItems, ...supplementalItems].slice(0, minimumVisibleCount),
+      matchedCount: matchedItems.length,
+      isSupplemented: true,
+    };
   };
 
   const getItemKey = (item, idx) =>
@@ -192,10 +221,21 @@ function App() {
   const formatScore = (value) =>
     typeof value === "number" ? value.toFixed(3) : null;
 
-  const filteredResults = results.filter(matchesResourceType);
+  const resourceTypeOptions = Array.from(
+    new Set(
+      [...results, ...citations]
+        .map((item) => normalizeResourceType(item?.resource_type))
+        .filter(Boolean)
+    )
+  );
   const filteredCitations = citations.filter(matchesResourceType);
+  const {
+    items: visibleResults,
+    matchedCount: matchedResultCount,
+    isSupplemented: isResultListSupplemented,
+  } = buildVisibleResults(results);
   const showNoResultsMessage =
-    hasSearched && !loading && !error && filteredResults.length === 0;
+    hasSearched && !loading && !error && visibleResults.length === 0;
 
   return (
     <div style={pageStyle}>
@@ -332,12 +372,11 @@ function App() {
                 <option value="all" style={{ color: "#153047" }}>
                   All
                 </option>
-                <option value="guideline" style={{ color: "#153047" }}>
-                  guideline
-                </option>
-                <option value="review" style={{ color: "#153047" }}>
-                  review
-                </option>
+                {resourceTypeOptions.map((option) => (
+                  <option key={option} value={option} style={{ color: "#153047" }}>
+                    {option}
+                  </option>
+                ))}
               </select>
             </label>
 
@@ -433,6 +472,160 @@ function App() {
               >
                 {answer}
               </p>
+            </div>
+
+            <div style={{ marginTop: "18px" }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "10px",
+                  marginBottom: "12px",
+                }}
+              >
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: "0.98rem",
+                    fontWeight: 700,
+                    color: "#163852",
+                  }}
+                >
+                  사용된 근거
+                </h3>
+                <span style={metricStyle}>
+                  요약에 연결된 citation을 바로 확인할 수 있습니다.
+                </span>
+              </div>
+
+              {filteredCitations.length === 0 ? (
+                <div
+                  style={{
+                    padding: "14px 16px",
+                    borderRadius: "14px",
+                    border: "1px solid #d8e5ec",
+                    backgroundColor: "#f7fbfd",
+                    color: "#6a7f90",
+                    fontSize: "0.9rem",
+                  }}
+                >
+                  표시할 근거가 없습니다.
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                    gap: "12px",
+                  }}
+                >
+                  {filteredCitations.map((item, idx) => {
+                    const isClickable = Boolean(item.source_url);
+
+                    const citationCardStyle = {
+                      padding: "14px 16px",
+                      borderRadius: "16px",
+                      border: "1px solid #d8e5ec",
+                      background:
+                        "linear-gradient(180deg, #fbfdfe 0%, #f1f7fa 100%)",
+                      color: "#1f425d",
+                      textDecoration: "none",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "10px",
+                      minHeight: "138px",
+                      cursor: isClickable ? "pointer" : "not-allowed",
+                      opacity: isClickable ? 1 : 0.68,
+                    };
+
+                    const citationCardContent = (
+                      <>
+                        <div
+                          style={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            gap: "8px",
+                            alignItems: "center",
+                          }}
+                        >
+                          <span style={badgeStyle}>Source {idx + 1}</span>
+                          {item.resource_type && (
+                            <span
+                              style={{
+                                ...badgeStyle,
+                                backgroundColor: "#eff7f1",
+                                color: "#397153",
+                              }}
+                            >
+                              {item.resource_type}
+                            </span>
+                          )}
+                        </div>
+
+                        <div
+                          style={{
+                            fontSize: "0.94rem",
+                            fontWeight: 700,
+                            color: "#163852",
+                            lineHeight: 1.5,
+                          }}
+                        >
+                          {item.title}
+                        </div>
+
+                        <div
+                          style={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            gap: "8px 12px",
+                            marginTop: "auto",
+                          }}
+                        >
+                          {formatScore(item.score) && (
+                            <span style={metricStyle}>
+                              score {formatScore(item.score)}
+                            </span>
+                          )}
+                          <span
+                            style={{
+                              ...metricStyle,
+                              color: isClickable ? "#0b6988" : "#7b8d9b",
+                            }}
+                          >
+                            {isClickable ? "새 탭으로 열기" : "링크 없음"}
+                          </span>
+                        </div>
+                      </>
+                    );
+
+                    if (!isClickable) {
+                      return (
+                        <div
+                          key={getItemKey(item, idx)}
+                          style={citationCardStyle}
+                          aria-disabled="true"
+                        >
+                          {citationCardContent}
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <a
+                        key={getItemKey(item, idx)}
+                        href={item.source_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={citationCardStyle}
+                      >
+                        {citationCardContent}
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </section>
         )}
@@ -563,6 +756,7 @@ function App() {
           <div
             style={{
               display: "flex",
+              flexWrap: "wrap",
               alignItems: "center",
               justifyContent: "space-between",
               marginBottom: "14px",
@@ -574,6 +768,24 @@ function App() {
               hybrid ranking과 reranking 이후의 상위 근거입니다.
             </span>
           </div>
+
+        {isResultListSupplemented && (
+          <div
+            style={{
+              ...surfaceStyle,
+              padding: "14px 16px",
+              marginBottom: "14px",
+              background:
+                "linear-gradient(180deg, #f8fcfe 0%, #eef6fa 100%)",
+              borderColor: "#d6e6ee",
+              color: "#30566f",
+            }}
+          >
+            <strong style={{ color: "#153047" }}>{resourceType}</strong> 결과가{" "}
+            {matchedResultCount}건이라, 검색 결과가 너무 적지 않도록 상위 전체
+            결과를 함께 보여드리고 있습니다.
+          </div>
+        )}
 
         {showNoResultsMessage && (
           <div
@@ -590,7 +802,7 @@ function App() {
 
           {!showNoResultsMessage && (
             <div style={{ display: "grid", gap: "16px" }}>
-              {filteredResults.map((item, idx) => {
+              {visibleResults.map((item, idx) => {
                 const itemKey = getItemKey(item, idx);
                 const isExpanded = Boolean(expandedResults[itemKey]);
                 const showExpandButton =
@@ -676,6 +888,24 @@ function App() {
                         </span>
                       )}
                     </div>
+
+                    {item.source_url && (
+                      <a
+                        href={item.source_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{
+                          display: "inline-block",
+                          marginTop: "12px",
+                          color: "#0b6988",
+                          fontSize: "0.88rem",
+                          textDecoration: "none",
+                          wordBreak: "break-all",
+                        }}
+                      >
+                        {item.source_url}
+                      </a>
+                    )}
 
                     {item.abstract && (
                       <div style={{ marginTop: "16px" }}>
