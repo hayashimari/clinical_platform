@@ -102,7 +102,7 @@ function App() {
     setError("");
 
     try {
-      const res = await fetch("http://localhost:8002/api/v1/search", {
+      const res = await fetch("https://clinical-platform-api-b2wt.onrender.com/api/v1/search", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: trimmedQuery }),
