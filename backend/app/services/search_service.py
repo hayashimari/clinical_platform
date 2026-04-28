@@ -108,7 +108,9 @@ def _fetch_search_rows(embedding: list[float], query: str):
 
 
 def _calculate_score(distance: float, keyword_boost: float) -> float:
-    return round((1 / (1 + distance)) + keyword_boost, 4)
+    distance_value = float(distance)
+    keyword_boost_value = float(keyword_boost)
+    return round((1 / (1 + distance_value)) + keyword_boost_value, 4)
 
 
 def _build_results(rows) -> list[dict]:
