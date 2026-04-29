@@ -3,79 +3,102 @@ import { useState } from "react";
 const pageStyle = {
   minHeight: "100vh",
   background:
-    "linear-gradient(180deg, #f3f8fb 0%, #eef4f8 22%, #f8fbfd 100%)",
-  color: "#102c44",
+    "linear-gradient(180deg, #eef4f8 0%, #f6f9fc 48%, #eef4f9 100%)",
+  color: "#12324a",
   fontFamily:
     '"Segoe UI", "Noto Sans KR", "Apple SD Gothic Neo", sans-serif',
 };
 
 const containerStyle = {
-  width: "min(900px, calc(100% - 32px))",
+  width: "100%",
+  maxWidth: "900px",
   margin: "0 auto",
-  padding: "32px 0 64px",
+  padding: "24px 16px 56px",
+  boxSizing: "border-box",
 };
 
 const surfaceStyle = {
   backgroundColor: "#ffffff",
-  border: "1px solid #c8dae5",
-  borderRadius: "18px",
-  boxShadow: "0 16px 32px rgba(16, 61, 92, 0.1)",
+  border: "1px solid #c4d6e2",
+  borderRadius: "16px",
+  boxShadow: "0 14px 30px rgba(14, 51, 78, 0.08)",
 };
 
 const sectionTitleStyle = {
   margin: 0,
-  fontSize: "1.15rem",
+  fontSize: "1.08rem",
   fontWeight: 700,
-  color: "#0f2e46",
+  color: "#12324a",
 };
 
 const cardTitleStyle = {
   margin: 0,
   fontSize: "1rem",
   fontWeight: 700,
-  color: "#0f2f48",
+  color: "#102f46",
   lineHeight: 1.45,
 };
 
 const metricStyle = {
-  fontSize: "0.78rem",
-  color: "#4f677a",
+  fontSize: "0.8rem",
+  color: "#536b7d",
 };
 
 const primaryButtonStyle = {
-  border: "none",
+  border: "1px solid #d3ebf5",
   borderRadius: "12px",
-  backgroundColor: "#0c5f7e",
-  color: "#ffffff",
-  padding: "12px 18px",
-  fontSize: "0.95rem",
-  fontWeight: 600,
+  backgroundColor: "#eff9fd",
+  color: "#0f4d67",
+  padding: "12px 16px",
+  fontSize: "0.92rem",
+  fontWeight: 700,
   cursor: "pointer",
+  whiteSpace: "nowrap",
+  boxSizing: "border-box",
 };
 
 const linkButtonStyle = {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  padding: "10px 16px",
-  borderRadius: "12px",
-  background: "linear-gradient(135deg, #0d6686 0%, #0b84ad 100%)",
+  padding: "9px 12px",
+  borderRadius: "10px",
+  border: "1px solid #0a5069",
+  background: "linear-gradient(180deg, #0f6d8d 0%, #0d5771 100%)",
   color: "#f8fdff",
-  fontSize: "0.88rem",
+  fontSize: "0.82rem",
   fontWeight: 700,
   textDecoration: "none",
-  boxShadow: "0 10px 20px rgba(11, 105, 136, 0.22)",
+  boxShadow: "0 10px 18px rgba(12, 88, 114, 0.18)",
+  whiteSpace: "nowrap",
 };
 
 const badgeStyle = {
   display: "inline-flex",
   alignItems: "center",
+  gap: "6px",
   padding: "6px 10px",
   borderRadius: "999px",
-  backgroundColor: "#e6f1f7",
-  color: "#35546a",
-  fontSize: "0.78rem",
+  backgroundColor: "#e8f2f8",
+  color: "#24475f",
+  fontSize: "0.76rem",
   fontWeight: 700,
+};
+
+const subtleBadgeStyle = {
+  ...badgeStyle,
+  backgroundColor: "#f1f7fb",
+  color: "#466276",
+};
+
+const textButtonStyle = {
+  border: "none",
+  padding: 0,
+  background: "transparent",
+  color: "#0c6584",
+  fontSize: "0.86rem",
+  fontWeight: 700,
+  cursor: "pointer",
 };
 
 const NO_EVIDENCE_MESSAGE =
@@ -109,6 +132,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
+  const [expandedResults, setExpandedResults] = useState({});
 
   const handleSearch = async () => {
     const trimmedQuery = query.trim();
@@ -120,11 +144,14 @@ function App() {
     setError("");
 
     try {
-      const res = await fetch("https://clinical-platform-api-b2wt.onrender.com/api/v1/search", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: trimmedQuery }),
-      });
+      const res = await fetch(
+        "https://clinical-platform-api-b2wt.onrender.com/api/v1/search",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: trimmedQuery }),
+        }
+      );
 
       if (!res.ok) {
         throw new Error("검색 요청 실패");
@@ -140,7 +167,9 @@ function App() {
       setAnswer(nextAnswer);
       setCitations(nextCitations);
       setResults(nextResults);
-      setError(!nextAnswer.trim() && nextResults.length > 0 ? NO_EVIDENCE_MESSAGE : "");
+      setError(
+        !nextAnswer.trim() && nextResults.length > 0 ? NO_EVIDENCE_MESSAGE : ""
+      );
     } catch {
       setAnswer("");
       setCitations([]);
@@ -177,9 +206,9 @@ function App() {
       .map((term) => term.replace(/[^\p{L}\p{N}-]/gu, "").trim())
       .filter((term) => term.length > 1);
 
-    return Array.from(
-      new Set([...SUMMARY_EMPHASIS_TERMS, ...queryTerms])
-    ).sort((left, right) => right.length - left.length);
+    return Array.from(new Set([...SUMMARY_EMPHASIS_TERMS, ...queryTerms])).sort(
+      (left, right) => right.length - left.length
+    );
   };
 
   const renderEmphasizedText = (text) => {
@@ -200,7 +229,7 @@ function App() {
 
     return safeText.split(emphasisRegex).map((part, idx) =>
       normalizedTerms.has(part.toLowerCase()) ? (
-        <strong key={idx} style={{ color: "#0f3552", fontWeight: 800 }}>
+        <strong key={idx} style={{ color: "#123d5d", fontWeight: 800 }}>
           {part}
         </strong>
       ) : (
@@ -227,10 +256,7 @@ function App() {
     const matchedItems = items.filter(matchesResourceType);
     const minimumVisibleCount = Math.min(MIN_VISIBLE_RESULTS, items.length);
 
-    if (
-      resourceType === "all" ||
-      matchedItems.length >= minimumVisibleCount
-    ) {
+    if (resourceType === "all" || matchedItems.length >= minimumVisibleCount) {
       return {
         items: matchedItems,
         matchedCount: matchedItems.length,
@@ -284,6 +310,18 @@ function App() {
       ? item.abstract.trim()
       : String(item?.content ?? "").trim();
 
+  const isExpandablePreview = (text) => {
+    const safeText = typeof text === "string" ? text : String(text ?? "");
+    return safeText.trim().length > 220 || safeText.includes("\n");
+  };
+
+  const toggleResultExpansion = (itemKey) => {
+    setExpandedResults((prev) => ({
+      ...prev,
+      [itemKey]: !prev[itemKey],
+    }));
+  };
+
   const resourceTypeOptions = Array.from(
     new Set(
       [...results, ...citations]
@@ -306,154 +344,170 @@ function App() {
         <section
           style={{
             ...surfaceStyle,
-            padding: "24px",
-            marginBottom: "24px",
+            padding: "20px",
+            marginBottom: "18px",
             background:
-              "linear-gradient(145deg, #0f5e7c 0%, #13506f 58%, #183c5a 100%)",
-            color: "#f6fbff",
+              "linear-gradient(180deg, #143f60 0%, #105774 58%, #0f6b89 100%)",
+            borderColor: "#2d6f88",
+            boxShadow: "0 22px 42px rgba(13, 55, 80, 0.2)",
+            color: "#f4fbff",
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "20px",
-              alignItems: "flex-end",
-              justifyContent: "space-between",
-            }}
-          >
-            <div style={{ flex: "1 1 320px" }}>
-              <p
-                style={{
-                  margin: "0 0 10px",
-                  fontSize: "0.82rem",
-                  fontWeight: 700,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  color: "#b7d9e7",
-                }}
-              >
-                Clinical Evidence Search
-              </p>
-              <h1
-                style={{
-                  margin: "0 0 12px",
-                  fontSize: "clamp(1.8rem, 4vw, 2.8rem)",
-                  lineHeight: 1.15,
-                }}
-              >
-                PubMed 근거 기반 임상 검색
-              </h1>
-              <p
-                style={{
-                  margin: 0,
-                  color: "#dcecf3",
-                  lineHeight: 1.7,
-                  maxWidth: "760px",
-                }}
-              >
-                임상 질문을 입력하면 관련 근거를 검색하고, AI가 핵심 내용을
-                요약해 드립니다. 근거 논문과 검색 결과를 함께 확인할 수
-                있습니다.
-              </p>
-            </div>
-          </div>
-
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSearch();
-            }}
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "12px",
-              marginTop: "24px",
-            }}
-          >
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="예: postoperative nausea vomiting prevention"
-              style={{
-                flex: "1 1 360px",
-                minWidth: 0,
-                padding: "14px 16px",
-                borderRadius: "14px",
-                border: "1px solid rgba(255, 255, 255, 0.24)",
-                backgroundColor: "rgba(255, 255, 255, 0.12)",
-                color: "#ffffff",
-                fontSize: "1rem",
-              }}
-            />
-
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                ...primaryButtonStyle,
-                minWidth: "132px",
-                backgroundColor: loading ? "#86a8b8" : "#f0fbff",
-                color: "#0e4f6a",
-              }}
-            >
-              {loading ? "검색 중..." : "검색"}
-            </button>
-          </form>
-
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "10px",
-              alignItems: "center",
-              marginTop: "14px",
-            }}
-          >
-            <label
+          <div style={{ display: "grid", gap: "16px" }}>
+            <div
               style={{
                 display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                color: "#dcecf3",
-                fontSize: "0.92rem",
+                flexWrap: "wrap",
+                gap: "12px",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
               }}
             >
-              <span>Resource Type</span>
-              <select
-                value={resourceType}
-                onChange={(e) => setResourceType(e.target.value)}
+              <div style={{ flex: "1 1 420px", minWidth: 0 }}>
+                <p
+                  style={{
+                    margin: "0 0 8px",
+                    fontSize: "0.76rem",
+                    fontWeight: 700,
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    color: "#bddbea",
+                  }}
+                >
+                  Evidence Retrieval
+                </p>
+                <h1
+                  style={{
+                    margin: "0 0 8px",
+                    fontSize: "clamp(1.35rem, 3vw, 1.72rem)",
+                    lineHeight: 1.2,
+                  }}
+                >
+                  Clinical Evidence Search
+                </h1>
+                <p
+                  style={{
+                    margin: 0,
+                    color: "#dcecf4",
+                    lineHeight: 1.55,
+                    fontSize: "0.94rem",
+                    maxWidth: "680px",
+                  }}
+                >
+                  임상 질문을 입력하면 관련 근거를 검색하고, AI 요약과 원문
+                  링크를 한 화면에서 빠르게 확인할 수 있습니다.
+                </p>
+              </div>
+
+              {searchedQuery && (
+                <span
+                  style={{
+                    ...badgeStyle,
+                    backgroundColor: "rgba(244, 251, 255, 0.16)",
+                    color: "#eef9ff",
+                  }}
+                >
+                  최근 검색어: {searchedQuery}
+                </span>
+              )}
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSearch();
+              }}
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "10px",
+                alignItems: "stretch",
+              }}
+            >
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="예: postoperative nausea vomiting prevention"
                 style={{
-                  padding: "8px 10px",
-                  borderRadius: "10px",
-                  border: "1px solid rgba(255, 255, 255, 0.24)",
+                  flex: "1 1 420px",
+                  minWidth: 0,
+                  padding: "13px 15px",
+                  borderRadius: "12px",
+                  border: "1px solid rgba(255, 255, 255, 0.22)",
                   backgroundColor: "rgba(255, 255, 255, 0.12)",
                   color: "#ffffff",
+                  fontSize: "0.96rem",
+                  boxSizing: "border-box",
                 }}
-              >
-                <option value="all" style={{ color: "#153047" }}>
-                  All
-                </option>
-                {resourceTypeOptions.map((option) => (
-                  <option key={option} value={option} style={{ color: "#153047" }}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </label>
+              />
 
-            {searchedQuery && (
-              <span
+              <button
+                type="submit"
+                disabled={loading}
                 style={{
-                  ...badgeStyle,
-                  backgroundColor: "rgba(255, 255, 255, 0.12)",
-                  color: "#eaf8ff",
+                  ...primaryButtonStyle,
+                  flex: "0 0 auto",
+                  minWidth: "116px",
+                  backgroundColor: loading ? "#a7c3cf" : "#eff9fd",
+                  color: loading ? "#355264" : "#0f4d67",
                 }}
               >
-                최근 검색어: {searchedQuery}
+                {loading ? "검색 중..." : "검색"}
+              </button>
+            </form>
+
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "10px 14px",
+                alignItems: "center",
+              }}
+            >
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "8px",
+                  color: "#dcecf4",
+                  fontSize: "0.89rem",
+                }}
+              >
+                <span>Resource Type</span>
+                <select
+                  value={resourceType}
+                  onChange={(e) => setResourceType(e.target.value)}
+                  style={{
+                    minWidth: "150px",
+                    padding: "8px 10px",
+                    borderRadius: "10px",
+                    border: "1px solid rgba(255, 255, 255, 0.2)",
+                    backgroundColor: "rgba(255, 255, 255, 0.12)",
+                    color: "#ffffff",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <option value="all" style={{ color: "#14344d" }}>
+                    All
+                  </option>
+                  {resourceTypeOptions.map((option) => (
+                    <option
+                      key={option}
+                      value={option}
+                      style={{ color: "#14344d" }}
+                    >
+                      {formatResourceTypeLabel(option)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <span style={{ ...metricStyle, color: "#dcecf4" }}>
+                필터를 적용해도 결과가 너무 적으면 상위 근거를 함께 보여줍니다.
               </span>
-            )}
+            </div>
           </div>
         </section>
 
@@ -461,10 +515,10 @@ function App() {
           <div
             style={{
               ...surfaceStyle,
-              padding: "16px 18px",
-              marginBottom: "20px",
-              borderColor: "#f0c6c6",
-              backgroundColor: "#fff5f5",
+              padding: "15px 17px",
+              marginBottom: "18px",
+              borderColor: "#efc4c4",
+              backgroundColor: "#fff6f6",
               color: "#b42318",
             }}
           >
@@ -477,7 +531,9 @@ function App() {
             style={{
               ...surfaceStyle,
               padding: "22px",
-              marginBottom: "20px",
+              marginBottom: "22px",
+              borderColor: "#adc9d8",
+              boxShadow: "0 18px 38px rgba(16, 72, 100, 0.12)",
             }}
           >
             <div
@@ -487,32 +543,38 @@ function App() {
                 gap: "12px",
                 justifyContent: "space-between",
                 alignItems: "center",
-                marginBottom: "14px",
+                marginBottom: "16px",
               }}
             >
               <div>
                 <p
                   style={{
                     margin: "0 0 6px",
-                    fontSize: "0.78rem",
+                    fontSize: "0.76rem",
                     fontWeight: 700,
                     letterSpacing: "0.08em",
                     textTransform: "uppercase",
-                    color: "#6e8798",
+                    color: "#5f7d92",
                   }}
                 >
                   AI Summary
                 </p>
-                <h2 style={{ ...sectionTitleStyle, fontSize: "1.3rem" }}>
-                  임상 근거 요약
+                <h2 style={{ ...sectionTitleStyle, fontSize: "1.36rem" }}>
+                  핵심 임상 요약
                 </h2>
               </div>
 
-              {filteredCitations.length > 0 && (
-                <span style={badgeStyle}>
-                  근거 논문 {filteredCitations.length}건
-                </span>
-              )}
+              <span
+                style={{
+                  ...badgeStyle,
+                  backgroundColor: "#edf7fc",
+                  color: "#1b5876",
+                }}
+              >
+                {filteredCitations.length > 0
+                  ? `근거 ${filteredCitations.length}건 연결`
+                  : "AI 요약"}
+              </span>
             </div>
 
             <div
@@ -520,39 +582,39 @@ function App() {
                 padding: "18px",
                 borderRadius: "16px",
                 background:
-                  "linear-gradient(180deg, #f8fcfe 0%, #eaf3f8 100%)",
-                border: "1px solid #cddfe9",
+                  "linear-gradient(180deg, #f8fcff 0%, #eef6fb 100%)",
+                border: "1px solid #cfdee8",
               }}
             >
-              <div style={{ display: "grid", gap: "10px" }}>
+              <div style={{ display: "grid", gap: "12px" }}>
                 {buildSummaryBullets(answer).map((bullet, idx) => (
                   <div
                     key={`${bullet}-${idx}`}
                     style={{
                       display: "grid",
-                      gridTemplateColumns: "16px 1fr",
-                      gap: "10px",
+                      gridTemplateColumns: "12px 1fr",
+                      gap: "12px",
                       alignItems: "flex-start",
-                      padding: "10px 12px",
-                      borderRadius: "12px",
+                      padding: "12px 14px",
+                      borderRadius: "14px",
                       backgroundColor: "#ffffff",
-                      border: "1px solid #d9e7ef",
+                      border: "1px solid #d7e6ef",
                     }}
                   >
                     <span
                       style={{
-                        fontSize: "1rem",
-                        lineHeight: 1.5,
-                        color: "#0f6787",
-                        fontWeight: 900,
+                        width: "8px",
+                        height: "8px",
+                        marginTop: "10px",
+                        borderRadius: "999px",
+                        backgroundColor: "#0d6786",
+                        boxShadow: "0 0 0 4px rgba(13, 103, 134, 0.12)",
                       }}
-                    >
-                      •
-                    </span>
+                    />
                     <div
                       style={{
-                        lineHeight: 1.7,
-                        color: "#1d405b",
+                        color: "#1a3f5a",
+                        lineHeight: 1.82,
                         fontSize: "0.97rem",
                       }}
                     >
@@ -568,9 +630,9 @@ function App() {
                 style={{
                   display: "flex",
                   flexWrap: "wrap",
-                  alignItems: "center",
+                  gap: "8px 12px",
                   justifyContent: "space-between",
-                  gap: "10px",
+                  alignItems: "center",
                   marginBottom: "12px",
                 }}
               >
@@ -585,16 +647,16 @@ function App() {
                   사용된 근거
                 </h3>
                 <span style={metricStyle}>
-                  요약에 연결된 citation을 바로 확인할 수 있습니다.
+                  citation chip을 눌러 원문 링크를 새 탭에서 열 수 있습니다.
                 </span>
               </div>
 
               {filteredCitations.length === 0 ? (
                 <div
                   style={{
-                    padding: "14px 16px",
+                    padding: "13px 15px",
                     borderRadius: "14px",
-                    border: "1px solid #d8e5ec",
+                    border: "1px solid #d9e5ec",
                     backgroundColor: "#f7fbfd",
                     color: "#6a7f90",
                     fontSize: "0.9rem",
@@ -605,111 +667,99 @@ function App() {
               ) : (
                 <div
                   style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-                    gap: "12px",
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "10px",
                   }}
                 >
                   {filteredCitations.map((item, idx) => {
+                    const itemKey = getItemKey(item, idx);
                     const isClickable = Boolean(item.source_url);
-
-                    const citationCardStyle = {
-                      padding: "14px 16px",
-                      borderRadius: "16px",
-                      border: "1px solid #d8e5ec",
-                      background:
-                        "linear-gradient(180deg, #fbfdfe 0%, #f1f7fa 100%)",
-                      color: "#1f425d",
+                    const relevanceLabel =
+                      formatRelevance(item.score) ?? "관련도 정보 없음";
+                    const chipStyle = {
+                      flex: "1 1 220px",
+                      minWidth: 0,
+                      padding: "12px 14px",
+                      borderRadius: "14px",
+                      border: "1px solid #d2e1ea",
+                      backgroundColor: isClickable ? "#f8fbfd" : "#f2f5f7",
+                      color: "#173b54",
                       textDecoration: "none",
                       display: "flex",
                       flexDirection: "column",
-                      gap: "10px",
-                      minHeight: "138px",
-                      cursor: isClickable ? "pointer" : "not-allowed",
-                      opacity: isClickable ? 1 : 0.68,
+                      gap: "8px",
+                      cursor: isClickable ? "pointer" : "default",
+                      opacity: isClickable ? 1 : 0.72,
                     };
 
-                    const citationCardContent = (
+                    const chipContent = (
                       <>
                         <div
                           style={{
                             display: "flex",
                             flexWrap: "wrap",
-                            gap: "8px",
+                            gap: "6px",
                             alignItems: "center",
                           }}
                         >
-                          <span style={badgeStyle}>Source {idx + 1}</span>
+                          <span style={subtleBadgeStyle}>Source {idx + 1}</span>
                           {item.resource_type && (
                             <span
                               style={{
-                                ...badgeStyle,
-                                backgroundColor: "#eff7f1",
-                                color: "#397153",
+                                ...subtleBadgeStyle,
+                                backgroundColor: "#edf6ef",
+                                color: "#2f6b4c",
                               }}
                             >
-                              {item.resource_type}
-                            </span>
-                          )}
-                        </div>
-
-                        <div
-                          style={{
-                            fontSize: "0.94rem",
-                            fontWeight: 700,
-                            color: "#163852",
-                            lineHeight: 1.5,
-                          }}
-                        >
-                          {item.title}
-                        </div>
-
-                        <div
-                          style={{
-                            display: "flex",
-                            flexWrap: "wrap",
-                            gap: "8px 12px",
-                            marginTop: "auto",
-                          }}
-                        >
-                          {formatScore(item.score) && (
-                            <span style={metricStyle}>
-                              score {formatScore(item.score)}
+                              {formatResourceTypeLabel(item.resource_type)}
                             </span>
                           )}
                           <span
                             style={{
-                              ...metricStyle,
-                              color: isClickable ? "#0b6988" : "#7b8d9b",
+                              ...subtleBadgeStyle,
+                              backgroundColor: "#edf5fb",
+                              color: "#1b5e7d",
                             }}
                           >
-                            {isClickable ? "새 탭으로 열기" : "링크 없음"}
+                            {relevanceLabel}
                           </span>
+                        </div>
+
+                        <div
+                          style={{
+                            fontSize: "0.88rem",
+                            fontWeight: 600,
+                            lineHeight: 1.45,
+                            color: "#24445d",
+                            display: "-webkit-box",
+                            WebkitBoxOrient: "vertical",
+                            WebkitLineClamp: 2,
+                            overflow: "hidden",
+                          }}
+                        >
+                          {item.title || (isClickable ? "원문 링크 열기" : "링크 없음")}
                         </div>
                       </>
                     );
 
                     if (!isClickable) {
                       return (
-                        <div
-                          key={getItemKey(item, idx)}
-                          style={citationCardStyle}
-                          aria-disabled="true"
-                        >
-                          {citationCardContent}
+                        <div key={itemKey} style={chipStyle} aria-disabled="true">
+                          {chipContent}
                         </div>
                       );
                     }
 
                     return (
                       <a
-                        key={getItemKey(item, idx)}
+                        key={itemKey}
                         href={item.source_url}
                         target="_blank"
                         rel="noreferrer"
-                        style={citationCardStyle}
+                        style={chipStyle}
                       >
-                        {citationCardContent}
+                        {chipContent}
                       </a>
                     );
                   })}
@@ -720,18 +770,20 @@ function App() {
         )}
 
         {answer && (
-          <section style={{ marginBottom: "28px" }}>
+          <section style={{ marginBottom: "26px" }}>
             <div
               style={{
                 display: "flex",
+                flexWrap: "wrap",
                 alignItems: "center",
                 justifyContent: "space-between",
                 marginBottom: "14px",
+                gap: "10px",
               }}
             >
               <h2 style={sectionTitleStyle}>근거 논문</h2>
               <span style={metricStyle}>
-                AI 요약에 사용된 citations를 확인할 수 있습니다.
+                AI 요약에 연결된 주요 citation을 카드 형태로 확인할 수 있습니다.
               </span>
             </div>
 
@@ -739,7 +791,7 @@ function App() {
               <div
                 style={{
                   ...surfaceStyle,
-                  padding: "26px",
+                  padding: "24px",
                   textAlign: "center",
                   color: "#6a7f90",
                 }}
@@ -751,91 +803,108 @@ function App() {
                 style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-                  gap: "16px",
+                  gap: "14px",
                 }}
               >
-                {filteredCitations.map((item, idx) => (
-                  <article
-                    key={getItemKey(item, idx)}
-                    style={{
-                      ...surfaceStyle,
-                      padding: "16px",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "10px",
-                    }}
-                  >
-                    <div
+                {filteredCitations.map((item, idx) => {
+                  const previewText = buildResultPreview(item);
+
+                  return (
+                    <article
+                      key={getItemKey(item, idx)}
                       style={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: "8px",
-                        alignItems: "center",
+                        ...surfaceStyle,
+                        padding: "16px",
+                        display: "grid",
+                        gap: "10px",
                       }}
                     >
-                      <span style={badgeStyle}>Source {idx + 1}</span>
-                      {item.resource_type && (
-                        <span
-                          style={{
-                            ...badgeStyle,
-                            backgroundColor: "#eff7f1",
-                            color: "#397153",
-                          }}
-                        >
-                          {item.resource_type}
-                        </span>
-                      )}
-                    </div>
-
-                    <h3 style={cardTitleStyle}>{item.title}</h3>
-
-                    {item.content && (
-                      <p
+                      <div
                         style={{
-                          margin: 0,
-                          color: "#466073",
-                          lineHeight: 1.7,
-                          fontSize: "0.92rem",
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: "8px",
+                          alignItems: "center",
                         }}
                       >
-                        {renderHighlightedText(item.content)}
-                      </p>
-                    )}
+                        <span style={subtleBadgeStyle}>Source {idx + 1}</span>
+                        {item.resource_type && (
+                          <span
+                            style={{
+                              ...subtleBadgeStyle,
+                              backgroundColor: "#edf6ef",
+                              color: "#2f6b4c",
+                            }}
+                          >
+                            {formatResourceTypeLabel(item.resource_type)}
+                          </span>
+                        )}
+                        {formatRelevance(item.score) && (
+                          <span
+                            style={{
+                              ...subtleBadgeStyle,
+                              backgroundColor: "#edf5fb",
+                              color: "#1b5e7d",
+                            }}
+                          >
+                            {formatRelevance(item.score)}
+                          </span>
+                        )}
+                      </div>
 
-                    <div
-                      style={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: "8px 10px",
-                      }}
-                    >
-                      {formatScore(item.score) && (
-                        <span style={metricStyle}>score {formatScore(item.score)}</span>
-                      )}
-                      {formatScore(item.vector_score) && (
-                        <span style={metricStyle}>
-                          vector {formatScore(item.vector_score)}
-                        </span>
-                      )}
-                      {formatScore(item.keyword_score) && (
-                        <span style={metricStyle}>
-                          keyword {formatScore(item.keyword_score)}
-                        </span>
-                      )}
-                    </div>
+                      <h3 style={cardTitleStyle}>{item.title}</h3>
 
-                    {item.source_url && (
-                      <a
-                        href={item.source_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ ...linkButtonStyle, marginTop: "auto" }}
+                      {previewText && (
+                        <div
+                          style={{
+                            color: "#415f74",
+                            lineHeight: 1.68,
+                            fontSize: "0.91rem",
+                            display: "-webkit-box",
+                            WebkitBoxOrient: "vertical",
+                            WebkitLineClamp: 3,
+                            overflow: "hidden",
+                          }}
+                        >
+                          {renderHighlightedText(previewText)}
+                        </div>
+                      )}
+
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: "8px 12px",
+                        }}
                       >
-                        PubMed 보기
-                      </a>
-                    )}
-                  </article>
-                ))}
+                        {formatScore(item.score) && (
+                          <span style={metricStyle}>score {formatScore(item.score)}</span>
+                        )}
+                        {formatScore(item.vector_score) && (
+                          <span style={metricStyle}>
+                            vector {formatScore(item.vector_score)}
+                          </span>
+                        )}
+                        {formatScore(item.keyword_score) && (
+                          <span style={metricStyle}>
+                            keyword {formatScore(item.keyword_score)}
+                          </span>
+                        )}
+                      </div>
+
+                      {item.source_url && (
+                        <a
+                          href={item.source_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ ...linkButtonStyle, marginTop: "2px" }}
+                        >
+                          PubMed 보기
+                        </a>
+                      )}
+                    </article>
+                  );
+                })}
               </div>
             )}
           </section>
@@ -858,42 +927,44 @@ function App() {
             </span>
           </div>
 
-        {isResultListSupplemented && (
-          <div
-            style={{
-              ...surfaceStyle,
-              padding: "14px 16px",
-              marginBottom: "14px",
-              background:
-                "linear-gradient(180deg, #f8fcfe 0%, #eef6fa 100%)",
-              borderColor: "#d6e6ee",
-              color: "#30566f",
-            }}
-          >
-            <strong style={{ color: "#153047" }}>{resourceType}</strong> 결과가{" "}
-            {matchedResultCount}건이라, 검색 결과가 너무 적지 않도록 상위 전체
-            결과를 함께 보여드리고 있습니다.
-          </div>
-        )}
+          {isResultListSupplemented && (
+            <div
+              style={{
+                ...surfaceStyle,
+                padding: "14px 16px",
+                marginBottom: "14px",
+                background:
+                  "linear-gradient(180deg, #f7fbfe 0%, #eef6fa 100%)",
+                borderColor: "#d3e3ec",
+                color: "#31556d",
+              }}
+            >
+              <strong style={{ color: "#153047" }}>{resourceType}</strong> 결과가{" "}
+              {matchedResultCount}건이라, 검색 결과가 너무 적지 않도록 상위 전체
+              결과를 함께 보여드리고 있습니다.
+            </div>
+          )}
 
-        {showNoResultsMessage && (
-          <div
-            style={{
-              ...surfaceStyle,
-              padding: "24px",
-              textAlign: "center",
-              color: "#657b8c",
-            }}
-          >
+          {showNoResultsMessage && (
+            <div
+              style={{
+                ...surfaceStyle,
+                padding: "24px",
+                textAlign: "center",
+                color: "#657b8c",
+              }}
+            >
               {NO_EVIDENCE_MESSAGE}
-          </div>
-        )}
+            </div>
+          )}
 
           {!showNoResultsMessage && (
-            <div style={{ display: "grid", gap: "16px" }}>
+            <div style={{ display: "grid", gap: "14px" }}>
               {visibleResults.map((item, idx) => {
                 const itemKey = getItemKey(item, idx);
                 const previewText = buildResultPreview(item);
+                const isExpanded = Boolean(expandedResults[itemKey]);
+                const canTogglePreview = isExpandablePreview(previewText);
 
                 return (
                   <article
@@ -901,13 +972,15 @@ function App() {
                     style={{
                       ...surfaceStyle,
                       padding: "16px 18px",
+                      display: "grid",
+                      gap: "12px",
                     }}
                   >
                     <div
                       style={{
                         display: "flex",
                         flexWrap: "wrap",
-                        gap: "10px",
+                        gap: "12px",
                         justifyContent: "space-between",
                         alignItems: "flex-start",
                       }}
@@ -926,117 +999,111 @@ function App() {
                             <span
                               style={{
                                 ...badgeStyle,
-                                backgroundColor: "#dfeef8",
-                                color: "#214e72",
+                                backgroundColor: "#e9f3f9",
+                                color: "#21506f",
                               }}
                             >
                               {formatResourceTypeLabel(item.resource_type)}
                             </span>
                           )}
-                          <span style={{ ...metricStyle, fontWeight: 700 }}>
-                            Result {idx + 1}
-                          </span>
+                          {formatRelevance(item.score) && (
+                            <span
+                              style={{
+                                ...badgeStyle,
+                                backgroundColor: "#eef6f1",
+                                color: "#225e3c",
+                              }}
+                            >
+                              {formatRelevance(item.score)}
+                            </span>
+                          )}
+                          <span style={subtleBadgeStyle}>Result {idx + 1}</span>
                         </div>
 
-                        <h3 style={{ ...cardTitleStyle, fontSize: "1.18rem" }}>
+                        <h3 style={{ ...cardTitleStyle, fontSize: "1.06rem" }}>
                           {item.title}
                         </h3>
                       </div>
 
-                      <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "10px",
-                          alignItems: "flex-end",
-                        }}
-                      >
-                        {formatRelevance(item.score) && (
-                          <span
-                            style={{
-                              ...badgeStyle,
-                              backgroundColor: "#e7f4ea",
-                              color: "#185e3b",
-                            }}
-                          >
-                            {formatRelevance(item.score)}
-                          </span>
-                        )}
-                        {item.source_url && (
-                          <a
-                            href={item.source_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={linkButtonStyle}
-                          >
-                            PubMed 보기
-                          </a>
-                        )}
-                      </div>
+                      {item.source_url && (
+                        <a
+                          href={item.source_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={linkButtonStyle}
+                        >
+                          PubMed 보기
+                        </a>
+                      )}
                     </div>
-
-                    {formatScore(item.score) && (
-                      <div
-                        style={{
-                          marginTop: "10px",
-                          color: "#587083",
-                          fontSize: "0.82rem",
-                          fontWeight: 600,
-                        }}
-                      >
-                        score {formatScore(item.score)}
-                      </div>
-                    )}
-
-                    {item.source_url && (
-                      <div
-                        style={{
-                          marginTop: "8px",
-                          color: "#486578",
-                          fontSize: "0.8rem",
-                          wordBreak: "break-all",
-                        }}
-                      >
-                        {item.source_url}
-                      </div>
-                    )}
 
                     {previewText && (
                       <div
                         style={{
-                          marginTop: "12px",
-                          padding: "12px 14px",
+                          padding: "13px 14px",
                           borderRadius: "14px",
-                          backgroundColor: "#f5fafc",
-                          border: "1px solid #dce8ef",
+                          backgroundColor: "#f6fafc",
+                          border: "1px solid #d9e6ee",
                         }}
                       >
-                        <p
-                          style={{
-                            margin: "0 0 6px",
-                            fontWeight: 700,
-                            color: "#1a405b",
-                            fontSize: "0.86rem",
-                          }}
-                        >
-                          핵심 요약
-                        </p>
                         <div
                           style={{
-                            margin: 0,
-                            color: "#304d63",
-                            lineHeight: 1.65,
+                            marginBottom: "6px",
+                            fontWeight: 700,
+                            color: "#1a405b",
+                            fontSize: "0.82rem",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.04em",
+                          }}
+                        >
+                          Abstract / Content
+                        </div>
+                        <div
+                          style={{
+                            color: "#324f64",
+                            lineHeight: 1.72,
                             fontSize: "0.92rem",
-                            display: "-webkit-box",
+                            display: isExpanded ? "block" : "-webkit-box",
                             WebkitBoxOrient: "vertical",
-                            WebkitLineClamp: 2,
+                            WebkitLineClamp: isExpanded ? "unset" : 3,
                             overflow: "hidden",
                           }}
                         >
                           {renderHighlightedText(previewText)}
                         </div>
+                        {canTogglePreview && (
+                          <button
+                            type="button"
+                            onClick={() => toggleResultExpansion(itemKey)}
+                            style={{ ...textButtonStyle, marginTop: "10px" }}
+                          >
+                            {isExpanded ? "접기" : "더보기"}
+                          </button>
+                        )}
                       </div>
                     )}
+
+                    <div
+                      style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: "8px 14px",
+                      }}
+                    >
+                      {formatScore(item.score) && (
+                        <span style={metricStyle}>score {formatScore(item.score)}</span>
+                      )}
+                      {formatScore(item.vector_score) && (
+                        <span style={metricStyle}>
+                          vector {formatScore(item.vector_score)}
+                        </span>
+                      )}
+                      {formatScore(item.keyword_score) && (
+                        <span style={metricStyle}>
+                          keyword {formatScore(item.keyword_score)}
+                        </span>
+                      )}
+                    </div>
                   </article>
                 );
               })}
